@@ -23,7 +23,7 @@
 """
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtWidgets import QAction, QFileDialog
 # Initialize Qt resources from file resources.py
 from .resources import *
 
@@ -72,6 +72,8 @@ class ImageSearcher:
 
         self.pluginIsActive = False
         self.dockwidget = None
+        self.importFolderPath = None #path to import image files from
+        self.importFilesList = None #list of imported image files
 
 
     # noinspection PyMethodMayBeStatic
@@ -206,6 +208,21 @@ class ImageSearcher:
         # remove the toolbar
         del self.toolbar
 
+    def importFolder(self):
+        """importFolder method imports all images in the folder"""
+        self.importFolderPath = QFileDialog.getExistingDirectory(
+        self.dockwidget, caption="Select import folder",
+        #directory=os.path.expanduser("~")
+        directory="C:\\Users\\LENOVO\\Desktop\\3months Vac\\Soko Aerial\\Building QGIS plugins with Python\\Images",
+        )
+
+    def importFile(self):
+        """importFile method imports an image file or a group of image files"""
+        self.importFilesList = QFileDialog.getOpenFileNames(
+        self.dockwidget, caption="Select image(s)",
+        directory="C:\\Users\\LENOVO\\Desktop\\3months Vac\\Soko Aerial\\Building QGIS plugins with Python\\Images",
+        filter="Image (*.jpg)")
+    
     #--------------------------------------------------------------------------
 
     def run(self):
@@ -222,6 +239,8 @@ class ImageSearcher:
             if self.dockwidget == None:
                 # Create the dockwidget (after translation) and keep reference
                 self.dockwidget = ImageSearcherDockWidget()
+                self.dockwidget.folderPushButton.clicked.connect(self.importFolder)
+                self.dockwidget.filePushButton.clicked.connect(self.importFile)
 
             # connect to provide cleanup on closing of dockwidget
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
