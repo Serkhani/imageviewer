@@ -75,6 +75,7 @@ class ImageSearcher:
         self.importFolderPath = None #path to import image files from
         self.importFilesList = None #list of imported image files
         self.isImporting = False #kept to keep track of the statep plugin
+        self.images = {} #a dictionary of images
 
 
     # noinspection PyMethodMayBeStatic
@@ -233,6 +234,19 @@ class ImageSearcher:
         self.dockwidget.graphicsView.setVisible(self.isImporting)
         self.dockwidget.overallImgProgress.setVisible(self.isImporting)
         self.dockwidget.overallProgressBar.setVisible(self.isImporting)
+
+
+    def startImport(self):
+        """Image is loaded and yolo inference takes place here"""
+
+        #This runs at the end to update the object
+        self.dockWidget.numImportImg.setText(f'{len(self.images)} images imported')
+        pass
+
+    
+    def search(self):
+        """This method checks to see if search term is a detection"""
+        pass
     
     #--------------------------------------------------------------------------
 
@@ -252,6 +266,7 @@ class ImageSearcher:
                 self.dockwidget = ImageSearcherDockWidget()
                 self.dockwidget.folderPushButton.clicked.connect(self.importFolder)
                 self.dockwidget.filePushButton.clicked.connect(self.importFile)
+                self.dockwidget.searchPushButton.clicked.connect(self.search)
                 self.checkIsImporting()
 
             # connect to provide cleanup on closing of dockwidget
