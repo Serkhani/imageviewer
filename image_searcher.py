@@ -74,6 +74,7 @@ class ImageSearcher:
         self.dockwidget = None
         self.importFolderPath = None #path to import image files from
         self.importFilesList = None #list of imported image files
+        self.isImporting = False #kept to keep track of the statep plugin
 
 
     # noinspection PyMethodMayBeStatic
@@ -222,6 +223,16 @@ class ImageSearcher:
         self.dockwidget, caption="Select image(s)",
         directory="C:\\Users\\LENOVO\\Desktop\\3months Vac\\Soko Aerial\\Building QGIS plugins with Python\\Images",
         filter="Image (*.jpg)")
+
+    
+    def checkIsImporting(self):
+        """This method is used to set visibility of objects depending on whether importation is taking place"""
+        self.dockwidget.importingLabel.setVisible(self.isImporting)
+        self.dockwidget.imageName.setVisible(self.isImporting)
+        self.dockwidget.indProgressBar.setVisible(self.isImporting)
+        self.dockwidget.graphicsView.setVisible(self.isImporting)
+        self.dockwidget.overallImgProgress.setVisible(self.isImporting)
+        self.dockwidget.overallProgressBar.setVisible(self.isImporting)
     
     #--------------------------------------------------------------------------
 
@@ -241,6 +252,7 @@ class ImageSearcher:
                 self.dockwidget = ImageSearcherDockWidget()
                 self.dockwidget.folderPushButton.clicked.connect(self.importFolder)
                 self.dockwidget.filePushButton.clicked.connect(self.importFile)
+                self.checkIsImporting()
 
             # connect to provide cleanup on closing of dockwidget
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
