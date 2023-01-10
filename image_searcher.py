@@ -29,7 +29,10 @@ from .resources import *
 
 # Import the code for the DockWidget
 from .image_searcher_dockwidget import ImageSearcherDockWidget
-import os.path
+from .image import ImageData
+from GPSPhoto import gpsphoto
+import os
+
 
 
 class ImageSearcher:
@@ -224,6 +227,9 @@ class ImageSearcher:
         self.dockwidget, caption="Select image(s)",
         directory="C:\\Users\\LENOVO\\Desktop\\3months Vac\\Soko Aerial\\Building QGIS plugins with Python\\Images",
         filter="Image (*.jpg)")
+        for img in self.importFilesList[0]:
+            data = gpsphoto.getGPSData(os.path.normpath(img))
+            print(data)
 
     
     def checkIsImporting(self):
