@@ -21,9 +21,9 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
-from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction, QFileDialog
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt, QRectF
+from qgis.PyQt.QtGui import QIcon, QImage, QPixmap
+from qgis.PyQt.QtWidgets import QAction, QFileDialog, QGraphicsScene, QGraphicsPixmapItem
 # Initialize Qt resources from file resources.py
 from .resources import *
 
@@ -51,7 +51,8 @@ class ImageSearcher:
 
         # initialize plugin directory
         self.plugin_dir = os.path.dirname(__file__)
-
+        self.canvas = iface.mapCanvas()
+       
         # initialize locale
         locale = QSettings().value('locale/userLocale')[0:2]
         locale_path = os.path.join(
@@ -228,8 +229,10 @@ class ImageSearcher:
         directory="C:\\Users\\LENOVO\\Desktop\\3months Vac\\Soko Aerial\\Building QGIS plugins with Python\\Images",
         filter="Image (*.jpg)")
         for img in self.importFilesList[0]:
-            data = gpsphoto.getGPSData(os.path.normpath(img))
-            print(data)
+            imgPath = os.path.normpath(img)
+            data = gpsphoto.getGPSData(imgPath)
+            image = ImageData(imgPath, data)
+            self.startImport(image)
 
     
     def checkIsImporting(self):
@@ -242,17 +245,29 @@ class ImageSearcher:
         self.dockwidget.overallProgressBar.setVisible(self.isImporting)
 
 
-    def startImport(self):
+    def startImport(self, image: 'ImageData'):
         """Image is loaded and yolo inference takes place here"""
-
+        self.images[image] = True #add image to database
+        self.showImageOnView(image.source)#show image in view
         #This runs at the end to update the object
-        self.dockWidget.numImportImg.setText(f'{len(self.images)} images imported')
+        self.dockwidget.numImportImg.setText(f'{len(self.images)} images imported')
         pass
 
     
     def search(self):
         """This method checks to see if search term is a detection"""
         pass
+
+    def showImageOnView(self, imgPath):
+        #this function is called to show the image on the view
+        if imgPath:
+            scene = QGraphicsScene()
+            self.dockwidget.graphicsView.setScene(scene)
+            pixmap = QPixmap(imgPath)
+            scene.addPixmap(pixmap)
+            self.dockwidget.graphicsView.fitInView(scene.itemsBoundingRect(), Qt.KeepAspectRatio)
+            self.dockwidget.graphicsView.show()
+
     
     #--------------------------------------------------------------------------
 
