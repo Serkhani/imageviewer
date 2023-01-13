@@ -1,7 +1,7 @@
 class ImageData:
     def __init__(self, source: str, gps: dict):
         self.source = source
-        self.name = source.split('//')[-1].split('.')[0]
+        self.name = source.split('\\')[-1].split('.')[0]
         self.gps = gps
 
     def isEqual(self, image: 'ImageData') -> bool:

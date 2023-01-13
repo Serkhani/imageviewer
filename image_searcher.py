@@ -21,9 +21,9 @@
  *                                                                         *
  ***************************************************************************/
 """
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt, QRectF
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt, QRectF, pyqtSignal
 from qgis.PyQt.QtGui import QIcon, QImage, QPixmap
-from qgis.PyQt.QtWidgets import QAction, QFileDialog, QGraphicsScene, QGraphicsPixmapItem
+from qgis.PyQt.QtWidgets import QAction, QFileDialog, QGraphicsScene, QGraphicsPixmapItem, QWidget
 # Initialize Qt resources from file resources.py
 from .resources import *
 
@@ -35,10 +35,17 @@ import os
 
 
 
-class ImageSearcher:
+class ImageSearcher(QWidget):
     """QGIS Plugin Implementation."""
 
+    # importing signal
+    isImportingSignal = pyqtSignal()
+
+
+
     def __init__(self, iface):
+        super(ImageSearcher, self).__init__()
+
         """Constructor.
 
         :param iface: An interface instance that will be passed to this class
@@ -46,6 +53,7 @@ class ImageSearcher:
             application at run time.
         :type iface: QgsInterface
         """
+        
         # Save reference to the QGIS interface
         self.iface = iface
 
@@ -191,7 +199,7 @@ class ImageSearcher:
 
         # disconnects
         self.dockwidget.closingPlugin.disconnect(self.onClosePlugin)
-
+        self.isImportingSignal.disconnect(self.checkIsImporting)
         # remove this statement if dockwidget is to remain
         # for reuse if plugin is reopened
         # Commented next statement since it causes QGIS crashe
@@ -228,12 +236,17 @@ class ImageSearcher:
         self.dockwidget, caption="Select image(s)",
         directory="C:\\Users\\LENOVO\\Desktop\\3months Vac\\Soko Aerial\\Building QGIS plugins with Python\\Images",
         filter="Image (*.jpg)")
-        for img in self.importFilesList[0]:
-            imgPath = os.path.normpath(img)
-            data = gpsphoto.getGPSData(imgPath)
-            image = ImageData(imgPath, data)
-            self.startImport(image)
-
+        if self.importFilesList[0]:
+            self.isImporting = True
+            self.isImportingSignal.emit()
+            total = len(self.importFilesList[0])
+            for index, img in enumerate(self.importFilesList[0]):
+                imgPath = os.path.normpath(img)
+                data = gpsphoto.getGPSData(imgPath)
+                image = ImageData(imgPath, data)
+                self.startImport(image)
+                self.dockwidget.indProgressBar.setValue(int(((index+1)/total)*100))
+        self.isImporting = False
     
     def checkIsImporting(self):
         """This method is used to set visibility of objects depending on whether importation is taking place"""
@@ -241,16 +254,15 @@ class ImageSearcher:
         self.dockwidget.imageName.setVisible(self.isImporting)
         self.dockwidget.indProgressBar.setVisible(self.isImporting)
         self.dockwidget.graphicsView.setVisible(self.isImporting)
-        self.dockwidget.overallImgProgress.setVisible(self.isImporting)
-        self.dockwidget.overallProgressBar.setVisible(self.isImporting)
 
 
     def startImport(self, image: 'ImageData'):
         """Image is loaded and yolo inference takes place here"""
         self.images[image] = True #add image to database
+        self.dockwidget.imageName.setText(image.name)
         self.showImageOnView(image.source)#show image in view
         #This runs at the end to update the object
-        self.dockwidget.numImportImg.setText(f'{len(self.images)} images imported')
+        self.dockwidget.numImportImg.setText(f'{len(self.images)} image(s) imported')
         pass
 
     
@@ -277,6 +289,9 @@ class ImageSearcher:
         if not self.pluginIsActive:
             self.pluginIsActive = True
 
+            self.isImportingSignal.connect(self.checkIsImporting)
+
+
             #print "** STARTING ImageSearcher"
 
             # dockwidget may not exist if:
@@ -288,10 +303,11 @@ class ImageSearcher:
                 self.dockwidget.folderPushButton.clicked.connect(self.importFolder)
                 self.dockwidget.filePushButton.clicked.connect(self.importFile)
                 self.dockwidget.searchPushButton.clicked.connect(self.search)
-                self.checkIsImporting()
+                self.isImportingSignal.emit()
 
             # connect to provide cleanup on closing of dockwidget
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
+
 
             # show the dockwidget
             # TODO: fix to allow choice of dock location
