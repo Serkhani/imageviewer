@@ -258,14 +258,21 @@ class ImageSearcher(QWidget):
 
     def startImport(self, image: 'ImageData'):
         """Image is loaded and yolo inference takes place here"""
-        self.images[image] = True #add image to database
+        try:
+            self.images[image.name]#check if image is already present
+        except KeyError:
+            self.images[image.name] = image #add image to database
+        else:
+            self.errorMessage(f"'{image.name}' already present in the database")
         self.dockwidget.imageName.setText(image.name)
         self.showImageOnView(image.source)#show image in view
         #This runs at the end to update the object
         self.dockwidget.numImportImg.setText(f'{len(self.images)} image(s) imported')
         pass
 
-    
+    def errorMessage(self, message):
+        self.iface.messageBar().pushInfo("Info", message)
+        
     def search(self):
         """This method checks to see if search term is a detection"""
         pass
