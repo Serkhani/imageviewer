@@ -24,9 +24,11 @@
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt, QRectF, pyqtSignal
 from qgis.PyQt.QtGui import QIcon, QImage, QPixmap
 from qgis.PyQt.QtWidgets import QAction, QFileDialog, QGraphicsScene, QGraphicsPixmapItem, QWidget
+from qgis.gui import QgsRuleBasedRendererWidget
+from qgis.core import *
 # Initialize Qt resources from file resources.py
 from .resources import *
-
+from time import sleep
 # Import the code for the DockWidget
 from .image_searcher_dockwidget import ImageSearcherDockWidget
 from .image import ImageData
@@ -227,14 +229,14 @@ class ImageSearcher(QWidget):
         self.importFolderPath = QFileDialog.getExistingDirectory(
         self.dockwidget, caption="Select import folder",
         #directory=os.path.expanduser("~")
-        directory="C:\\Users\\LENOVO\\Desktop\\3months Vac\\Soko Aerial\\Building QGIS plugins with Python\\Images",
+        directory="C:\\Users\\LENOVO\\Desktop",#\\3months Vac\\Soko Aerial\\Building QGIS plugins with Python\\Images",
         )
 
     def importFile(self):
         """importFile method imports an image file or a group of image files"""
         self.importFilesList = QFileDialog.getOpenFileNames(
         self.dockwidget, caption="Select image(s)",
-        directory="C:\\Users\\LENOVO\\Desktop\\3months Vac\\Soko Aerial\\Building QGIS plugins with Python\\Images",
+        directory="C:\\Users\\LENOVO\\Desktop",#\\3months Vac\\Soko Aerial\\Building QGIS plugins with Python\\Images",
         filter="Image (*.jpg)")
         if self.importFilesList[0]:
             self.isImporting = True
@@ -245,8 +247,41 @@ class ImageSearcher(QWidget):
                 data = gpsphoto.getGPSData(imgPath)
                 image = ImageData(imgPath, data)
                 self.startImport(image)
+                self.addMarker(image)
                 self.dockwidget.indProgressBar.setValue(int(((index+1)/total)*100))
         self.isImporting = False
+        sleep(5)
+        self.isImportingSignal.emit()
+
+
+    def setupVectorLayer(self):
+        # Do something useful here - delete the line containing pass and
+        # substitute with your code.
+        uri = "Point?crs=epsg:4326&field=image:string(75)&field=latitude:double&field=longitude:double&field=Altitude:double"
+        self.vectorLayer = QgsVectorLayer(uri, "images" , "memory")
+        self.vectorLayer.setRenderer(QgsFeatureRenderer.defaultRenderer(QgsWkbTypes.PointGeometry))
+        self.vectorLayer.loadNamedStyle(os.path.join(self.plugin_dir, 'icons', "photos.qml"))
+        renderer_widget = QgsRuleBasedRendererWidget(self.vectorLayer, QgsStyle.defaultStyle(), self.vectorLayer.renderer())
+        renderer_widget.setObjectName("renderer_widget")
+        self.vectorProvider = self.vectorLayer.dataProvider()
+        self.vectorLayer.updateFields()
+
+
+
+    def addMarker(self, image: 'ImageData'):
+        # self.images : imgName: ImageData(ie: name, source, gpsinfo)
+        point = QgsGeometry.fromPointXY(QgsPointXY(image.gps['Longitude'],image.gps['Latitude']))
+        feature = QgsFeature()
+        feature.setGeometry(point)
+        feature.setAttributes([image.name, image.gps['Latitude'], image.gps['Longitude'], image.gps['Altitude']])
+        self.vectorProvider.addFeatures([feature])
+        self.vectorLayer.updateExtents()
+        QgsProject.instance().addMapLayer(self.vectorLayer)
+        self.iface.setActiveLayer(self.vectorLayer)
+        activeLayer = self.iface.activeLayer()
+        actions = activeLayer.actions()
+        actions.addAction(QgsAction.OpenUrl, "Photos", '[% "photo" %]')
+
     
     def checkIsImporting(self):
         """This method is used to set visibility of objects depending on whether importation is taking place"""
@@ -266,6 +301,8 @@ class ImageSearcher(QWidget):
             self.errorMessage(f"'{image.name}' already present in the database")
         self.dockwidget.imageName.setText(image.name)
         self.showImageOnView(image.source)#show image in view
+        # Run yolo inference here
+
         #This runs at the end to update the object
         self.dockwidget.numImportImg.setText(f'{len(self.images)} image(s) imported')
         pass
@@ -306,6 +343,7 @@ class ImageSearcher(QWidget):
             #    removed on close (see self.onClosePlugin method)
             if self.dockwidget == None:
                 # Create the dockwidget (after translation) and keep reference
+                self.setupVectorLayer() #create vector layer
                 self.dockwidget = ImageSearcherDockWidget()
                 self.dockwidget.folderPushButton.clicked.connect(self.importFolder)
                 self.dockwidget.filePushButton.clicked.connect(self.importFile)
