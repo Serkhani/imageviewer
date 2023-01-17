@@ -250,7 +250,25 @@ class ImageSearcher(QWidget):
         #directory=os.path.expanduser("~")
         directory="C:\\Users\\LENOVO\\Desktop",#\\3months Vac\\Soko Aerial\\Building QGIS plugins with Python\\Images",
         )
-        
+        if self.importFolderPath:
+            self.isImporting = True
+            self.isImportingSignal.emit()
+            for root, dirs, filenames in os.walk(os.path.normpath(self.importFolderPath)):
+                total = len(filenames)
+                for index, _file in enumerate(filenames):
+                    if _file.lower().endswith(('.jpg','.png')):
+                        imgPath = os.path.join(root,_file)
+                        data = gpsphoto.getGPSData(imgPath)
+                        image = ImageData(imgPath, data)
+                        self.startImport(image)
+                        self.addMarker(image)
+                        self.dockwidget.indProgressBar.setValue(int(((index+1)/total)*100))
+                break
+
+            self.isImporting = False
+            self.isImportingSignal.emit()
+                    
+
 
     def importFile(self):
         """importFile method imports an image file or a group of image files"""
