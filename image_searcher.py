@@ -32,6 +32,7 @@ from time import sleep
 # Import the code for the DockWidget
 from .image_searcher_dockwidget import ImageSearcherDockWidget
 from .image import ImageData
+from .mouse_click import MouseClick
 from GPSPhoto import gpsphoto
 import os
 
@@ -192,6 +193,24 @@ class ImageSearcher(QWidget):
             callback=self.run,
             parent=self.iface.mainWindow())
 
+        self.setupVectorLayer() #create vector layer
+        self.toolMouseClick = MouseClick(self.canvas, self)
+
+    def refresh(self):
+        self.iface.mainWindow().findChild(QAction, 'mActionDeselectAll').trigger()
+        self.canvas.refresh()
+
+
+    def setMouseClickMapTool(self):
+
+        # Set photos layer as active layer
+        for layer in QgsProject.instance().mapLayers().values():
+            if layer.type() == QgsMapLayerType.VectorLayer:
+                self.iface.setActiveLayer(layer)
+                break
+
+        self.canvas.setMapTool(self.toolMouseClick)        
+
     #--------------------------------------------------------------------------
 
     def onClosePlugin(self):
@@ -231,6 +250,7 @@ class ImageSearcher(QWidget):
         #directory=os.path.expanduser("~")
         directory="C:\\Users\\LENOVO\\Desktop",#\\3months Vac\\Soko Aerial\\Building QGIS plugins with Python\\Images",
         )
+        
 
     def importFile(self):
         """importFile method imports an image file or a group of image files"""
@@ -250,8 +270,9 @@ class ImageSearcher(QWidget):
                 self.addMarker(image)
                 self.dockwidget.indProgressBar.setValue(int(((index+1)/total)*100))
         self.isImporting = False
-        sleep(5)
+        sleep(3)
         self.isImportingSignal.emit()
+
 
 
     def setupVectorLayer(self):
@@ -268,12 +289,13 @@ class ImageSearcher(QWidget):
 
 
 
+
     def addMarker(self, image: 'ImageData'):
         # self.images : imgName: ImageData(ie: name, source, gpsinfo)
-        point = QgsGeometry.fromPointXY(QgsPointXY(image.gps['Longitude'],image.gps['Latitude']))
+        point = QgsGeometry.fromPointXY(QgsPointXY(image.gps.get('Longitude'),image.gps.get('Latitude')))
         feature = QgsFeature()
         feature.setGeometry(point)
-        feature.setAttributes([image.name, image.gps['Latitude'], image.gps['Longitude'], image.gps['Altitude']])
+        feature.setAttributes([image.name, image.gps.get('Latitude'), image.gps.get('Longitude'), image.gps.get('Altitude',0.0)])
         self.vectorProvider.addFeatures([feature])
         self.vectorLayer.updateExtents()
         QgsProject.instance().addMapLayer(self.vectorLayer)
@@ -305,14 +327,14 @@ class ImageSearcher(QWidget):
 
         #This runs at the end to update the object
         self.dockwidget.numImportImg.setText(f'{len(self.images)} image(s) imported')
-        pass
+
 
     def errorMessage(self, message):
         self.iface.messageBar().pushInfo("Info", message)
         
     def search(self):
         """This method checks to see if search term is a detection"""
-        pass
+        self.setMouseClickMapTool()
 
     def showImageOnView(self, imgPath):
         #this function is called to show the image on the view
@@ -343,7 +365,6 @@ class ImageSearcher(QWidget):
             #    removed on close (see self.onClosePlugin method)
             if self.dockwidget == None:
                 # Create the dockwidget (after translation) and keep reference
-                self.setupVectorLayer() #create vector layer
                 self.dockwidget = ImageSearcherDockWidget()
                 self.dockwidget.folderPushButton.clicked.connect(self.importFolder)
                 self.dockwidget.filePushButton.clicked.connect(self.importFile)
